@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Prediction Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --surface2: #1a1a26;
+      --border: rgba(255,255,255,0.07);
+      --accent: #7c6aff;
+      --accent2: #ff6ac2;
+      --accent3: #6affd4;
+      --text: #e8e8f0;
+      --muted: #6b6b80;
+      --success: #6affd4;
+      --error: #ff6a6a;
+    }
+
+    body {
+      font-family: 'DM Mono', monospace;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Animated mesh background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 20% 10%, rgba(124,106,255,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 80% 80%, rgba(255,106,194,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 60% 40%, rgba(106,255,212,0.05) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .grid-bg {
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 48px 24px;
+    }
+
+    /* Header */
+    header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 48px;
+      animation: fadeDown 0.6s ease both;
+    }
+
+    .logo-block h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: #fff;
+    }
+
+    .logo-block h1 span {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .logo-block p {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 4px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      background: rgba(106,255,212,0.07);
+      border: 1px solid rgba(106,255,212,0.2);
+      border-radius: 100px;
+      font-size: 11px;
+      color: var(--accent3);
+      letter-spacing: 0.06em;
+    }
+
+    .status-dot {
+      width: 7px; height: 7px;
+      background: var(--accent3);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--accent3);
+      animation: pulse 2s infinite;
+    }
+
+    /* Main layout */
+    .dashboard {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 20px;
+      align-items: start;
+    }
+
+    /* Cards */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(124,106,255,0.4), transparent);
+    }
+
+    .card-label {
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-label::before {
+      content: '';
+      display: inline-block;
+      width: 3px; height: 3px;
+      background: var(--accent);
+      border-radius: 50%;
+    }
+
+    /* Input section */
+    .input-card { animation: fadeUp 0.6s ease 0.1s both; }
+
+    .features-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .feature-row {
+      display: grid;
+      grid-template-columns: 120px 1fr auto;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .feature-name {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+    }
+
+    .slider-wrap {
+      position: relative;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 4px;
+      background: var(--surface2);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px; height: 16px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 12px rgba(124,106,255,0.6);
+      transition: transform 0.15s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.25);
+    }
+
+    .range-track {
+      position: absolute;
+      top: 50%; left: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 2px;
+      pointer-events: none;
+      transform: translateY(-50%);
+    }
+
+    .feature-val {
+      font-size: 13px;
+      font-weight: 500;
+      color: #fff;
+      min-width: 40px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Number inputs */
+    .number-inputs {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .num-input-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .num-input-wrap label {
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .num-input-wrap input[type="number"] {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 14px;
+      outline: none;
+      width: 100%;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .num-input-wrap input[type="number"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(124,106,255,0.15);
+    }
+
+    .num-input-wrap input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+    /* Predict button */
+    .predict-btn {
+      margin-top: 28px;
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, var(--accent), #9b5de5);
+      border: none;
+      border-radius: 12px;
+      color: #fff;
+      font-family: 'Syne', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: opacity 0.2s, transform 0.15s;
+    }
+
+    .predict-btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
+    }
+
+    .predict-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .predict-btn:active { transform: translateY(0); }
+    .predict-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-inner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .btn-icon { font-size: 18px; }
+
+    /* Right column */
+    .right-col { display: flex; flex-direction: column; gap: 20px; }
+
+    /* Result card */
+    .result-card { animation: fadeUp 0.6s ease 0.2s both; }
+
+    .result-display {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 0 24px;
+      gap: 8px;
+    }
+
+    .result-label {
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .result-value {
+      font-family: 'Syne', sans-serif;
+      font-size: 56px;
+      font-weight: 800;
+      line-height: 1;
+      background: linear-gradient(135deg, #fff 30%, var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      transition: all 0.4s ease;
+      min-height: 70px;
+      display: flex;
+      align-items: center;
+    }
+
+    .result-value.empty { color: var(--muted); -webkit-text-fill-color: var(--muted); font-size: 36px; }
+
+    .result-confidence {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .result-bar {
+      width: 100%;
+      height: 3px;
+      background: var(--surface2);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 16px;
+    }
+
+    .result-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 2px;
+      transition: width 0.8s cubic-bezier(0.16,1,0.3,1);
+    }
+
+    /* History card */
+    .history-card { animation: fadeUp 0.6s ease 0.3s both; }
+
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 220px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--surface2) transparent;
+    }
+
+    .history-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: var(--surface2);
+      border-radius: 8px;
+      font-size: 11px;
+      animation: fadeLeft 0.3s ease both;
+    }
+
+    .history-features {
+      color: var(--muted);
+      font-size: 10px;
+    }
+
+    .history-val {
+      font-weight: 500;
+      color: var(--accent3);
+    }
+
+    .history-empty {
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
+      padding: 20px 0;
+    }
+
+    /* Stats card */
+    .stats-card { animation: fadeUp 0.6s ease 0.15s both; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .stat-item {
+      background: var(--surface2);
+      border-radius: 10px;
+      padding: 14px;
+    }
+
+    .stat-n {
+      font-family: 'Syne', sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .stat-d {
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    /* Error message */
+    .error-msg {
+      display: none;
+      margin-top: 12px;
+      padding: 10px 14px;
+      background: rgba(255,106,106,0.1);
+      border: 1px solid rgba(255,106,106,0.25);
+      border-radius: 8px;
+      font-size: 11px;
+      color: var(--error);
+    }
+
+    /* Loading spinner */
+    .spinner {
+      display: none;
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    /* Animations */
+    @keyframes fadeDown { from { opacity:0; transform:translateY(-16px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes fadeUp   { from { opacity:0; transform:translateY(20px);  } to { opacity:1; transform:translateY(0); } }
+    @keyframes fadeLeft { from { opacity:0; transform:translateX(10px);  } to { opacity:1; transform:translateX(0); } }
+    @keyframes spin     { to { transform:rotate(360deg); } }
+    @keyframes pulse    { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+    @keyframes pop      { 0%{transform:scale(0.85);opacity:0;} 60%{transform:scale(1.06);} 100%{transform:scale(1);opacity:1;} }
+
+    .pop { animation: pop 0.35s cubic-bezier(0.16,1,0.3,1) both; }
+
+    @media (max-width: 768px) {
+      .dashboard { grid-template-columns: 1fr; }
+      .feature-row { grid-template-columns: 90px 1fr auto; }
+      .number-inputs { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="grid-bg"></div>
+  <div class="container">
+    <header>
+      <div class="logo-block">
+        <h1>California House Pricing Prediction<span>Lab</span></h1>
+        <p>ML Inference Dashboard &mdash; GIDEON OYEGBAMI</p>
+      </div>
+      <div class="status-pill">
+        <span class="status-dot"></span>
+        Model Online
+      </div>
+    </header>
+
+    <div class="dashboard">
+      <!-- Left: Input -->
+      <div>
+        <div class="card input-card">
+          <div class="card-label">Feature Input</div>
+          <div class="feature-row">
+            <span class="feature-name">MedInc</span>
+            <div class="slider-wrap">
+              <div class="range-track" id="track1"></div>
+              <input type="range" id="slider1" min="0" max="15" value="5"
+                oninput="syncInput(1,this.value)"/>
+            </div>
+            <span class="feature-val" id="val1">5</span>
+          </div>
+
+          <div class="feature-row">
+            <span class="feature-name">HouseAge</span>
+            <div class="slider-wrap">
+              <div class="range-track" id="track2"></div>
+              <input type="range" id="slider2" min="1" max="50" value="25"
+                oninput="syncInput(2,this.value)"/>
+            </div>
+            <span class="feature-val" id="val2">25</span>
+          </div>
+
+          <div class="feature-row">
+            <span class="feature-name">AveRooms</span>
+            <div class="slider-wrap">
+              <div class="range-track" id="track3"></div>
+              <input type="range" id="slider3" min="1" max="10" value="5"
+                oninput="syncInput(3,this.value)"/>
+            </div>
+            <span class="feature-val" id="val3">5</span>
+          </div>
+
+          <div class="feature-row">
+            <span class="feature-name">AveBedrms</span>
+            <div class="slider-wrap">
+              <div class="range-track" id="track4"></div>
+              <input type="range" id="slider4" min="1" max="5" value="2"
+                oninput="syncInput(4,this.value)"/>
+            </div>
+            <span class="feature-val" id="val4">2</span>
+          </div>
+
+          <div class="feature-row">
+            <span class="feature-name">Population</span>
+            <div class="slider-wrap">
+              <div class="range-track" id="track5"></div>
+              <input type="range" id="slider5" min="0" max="5000" value="1000"
+                oninput="syncInput(5,this.value)"/>
+            </div>
+            <span class="feature-val" id="val5">1000</span>
+          </div>
+
+          <div class="feature-row">
+            <span class="feature-name">AveOccup</span>
+            <div class="slider-wrap">
+              <div class="range-track" id="track6"></div>
+              <input type="range" id="slider6" min="1" max="10" value="3"
+                oninput="syncInput(6,this.value)"/>
+            </div>
+            <span class="feature-val" id="val6">3</span>
+          </div>
+
+          <div class="feature-row">
+            <span class="feature-name">Latitude</span>
+            <div class="slider-wrap">
+              <div class="range-track" id="track7"></div>
+              <input type="range" id="slider7" min="30" max="42" value="36"
+                oninput="syncInput(7,this.value)"/>
+            </div>
+            <span class="feature-val" id="val7">36</span>
+          </div>
+          </div>
+
+          <div class="number-inputs">
+            
+            <div class="num-input-wrap">
+              <label>MedInc/label>
+              <input type="number" id="num1" value="1000"/>
+            </div>
+
+            <div class="num-input-wrap">
+              <label>HouseAge</label>
+              <input type="number" id="num2" value="1000"/>
+            </div>
+
+            <div class="num-input-wrap">
+              <label>AvgRooms</label>
+              <input type="number" id="num3" value="1000"/>
+            </div>
+
+
+            <div class="num-input-wrap">
+              <label>AveBedrms</label>
+              <input type="number" id="num4" value="25"/>
+            </div>
+
+            <div class="num-input-wrap">
+              <label>Population</label>
+              <input type="number" id="num5" value="1000"/>
+            </div>
+
+            <div class="num-input-wrap">
+              <label>AveOccup</label>
+              <input type="number" id="num6" value="3"/>
+            </div>
+
+            <div class="num-input-wrap">
+              <label>Latitude</label>
+              <input type="number" id="num7" value="6.52"/>
+            </div>
+          </div>
+
+          <button class="predict-btn" id="predictBtn" onclick="runPredict()">
+            <div class="btn-inner">
+              <div class="spinner" id="spinner"></div>
+              <span class="btn-icon" id="btnIcon">⚡</span>
+              <span id="btnText">Run Prediction</span>
+            </div>
+          </button>
+          <div class="error-msg" id="errorMsg"></div>
+        </div>
+
+        <div class="card stats-card" style="margin-top:20px;">
+          <div class="card-label">Session Stats</div>
+          <div class="stats-grid">
+            <div class="stat-item">
+              <div class="stat-n" id="statCount">0</div>
+              <div class="stat-d">Predictions</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-n" id="statAvg">—</div>
+              <div class="stat-d">Avg Result</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-n" id="statMin">—</div>
+              <div class="stat-d">Min</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-n" id="statMax">—</div>
+              <div class="stat-d">Max</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right column -->
+      <div class="right-col">
+        <div class="card result-card">
+          <div class="card-label">Prediction Result</div>
+          <div class="result-display">
+            <div class="result-label">Output Value</div>
+            <div class="result-value empty" id="resultValue">—</div>
+            <div class="result-confidence" id="resultMeta">Awaiting input</div>
+          </div>
+          <div class="result-bar"><div class="result-bar-fill" id="resultBar"></div></div>
+        </div>
+
+        <div class="card history-card">
+          <div class="card-label">Recent Predictions</div>
+          <div class="history-list" id="historyList">
+            <div class="history-empty">No predictions yet</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  const history = [];
+
+  function syncInput(n, v) {
+    document.getElementById(`num${n}`).value = v;
+    document.getElementById(`val${n}`).textContent = v;
+    updateTrack(n, v);
+  }
+
+  function syncSlider(n, v) {
+    const clamped = Math.min(100, Math.max(0, Number(v)));
+    document.getElementById(`slider${n}`).value = clamped;
+    document.getElementById(`val${n}`).textContent = clamped;
+    updateTrack(n, clamped);
+  }
+
+  function updateTrack(n, v) {
+    document.getElementById(`track${n}`).style.width = v + '%';
+  }
+
+  // Init tracks
+  [1,2,3,4,5,6,7].forEach(n => updateTrack(n, 50));
+
+  async function runPredict() {
+    const btn = document.getElementById('predictBtn');
+    const spinner = document.getElementById('spinner');
+    const btnIcon = document.getElementById('btnIcon');
+    const btnText = document.getElementById('btnText');
+    const errorMsg = document.getElementById('errorMsg');
+
+    const f1 = parseFloat(document.getElementById('num1').value);
+    const f2 = parseFloat(document.getElementById('num2').value);
+    const f3 = parseFloat(document.getElementById('num3').value);
+
+    // NEW 4 FEATURES (added to match backend)
+    const f4 = parseFloat(document.getElementById('num4').value);
+    const f5 = parseFloat(document.getElementById('num5').value);
+    const f6 = parseFloat(document.getElementById('num6').value);
+    const f7 = parseFloat(document.getElementById('num7').value);
+
+    if ([f1,f2,f3,f4,f5,f6,f7].some(isNaN)) {
+      showError('All feature values must be valid numbers.');
+      return;
+    }
+
+    // Loading state
+    btn.disabled = true;
+    spinner.style.display = 'block';
+    btnIcon.style.display = 'none';
+    btnText.textContent = 'Running...';
+    errorMsg.style.display = 'none';
+
+    try {
+      const res = await fetch('/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          data: {
+            MedInc: f1,
+            HouseAge: f2,
+            AveRooms: f3,
+            AveBedrms: f4,
+            Population: f5,
+            AveOccup: f6,
+            Latitude: f7
+          }
+        })
+      });
+
+      if (!res.ok) throw new Error(`Server error: ${res.status}`);
+
+      const data = await res.json();
+      displayResult(data.prediction, f1, f2, f3, f4, f5, f6, f7);
+
+    } catch (err) {
+      showError(err.message || 'Prediction failed. Check server connection.');
+    } finally {
+      btn.disabled = false;
+      spinner.style.display = 'none';
+      btnIcon.style.display = 'inline';
+      btnText.textContent = 'Run Prediction';
+    }
+  }
+
+  function displayResult(value, f1,f2,f3,f4,f5,f6,f7) {
+    const rv = document.getElementById('resultValue');
+    const meta = document.getElementById('resultMeta');
+    const bar = document.getElementById('resultBar');
+
+    const display = typeof value === 'number' ? value.toFixed(3) : value;
+    rv.textContent = display;
+    rv.classList.remove('empty');
+    rv.classList.add('pop');
+    setTimeout(() => rv.classList.remove('pop'), 400);
+
+    meta.textContent = `Computed at ${new Date().toLocaleTimeString()}`;
+
+    if (typeof value === 'number') {
+      const pct = Math.min(100, Math.max(5, ((value + 100) / 200) * 100));
+      bar.style.width = pct + '%';
+    } else {
+      bar.style.width = '50%';
+    }
+
+    history.unshift({ value, f1,f2,f3,f4,f5,f6,f7, time: new Date().toLocaleTimeString() });
+    if (history.length > 10) history.pop();
+    updateHistory();
+    updateStats();
+  }
+
+  function updateHistory() {
+    const list = document.getElementById('historyList');
+
+    if (history.length === 0) {
+      list.innerHTML = '<div class="history-empty">No predictions yet</div>';
+      return;
+    }
+
+    list.innerHTML = history.map(h => `
+      <div class="history-item">
+        <span class="history-features">
+          [${h.f1}, ${h.f2}, ${h.f3}, ...] &nbsp;${h.time}
+        </span>
+        <span class="history-val">
+          ${typeof h.value === 'number' ? h.value.toFixed(3) : h.value}
+        </span>
+      </div>
+    `).join('');
+  }
+
+  function updateStats() {
+    const nums = history.map(h => h.value).filter(v => typeof v === 'number');
+
+    document.getElementById('statCount').textContent = history.length;
+
+    if (nums.length) {
+      document.getElementById('statAvg').textContent =
+        (nums.reduce((a,b)=>a+b,0)/nums.length).toFixed(2);
+
+      document.getElementById('statMin').textContent =
+        Math.min(...nums).toFixed(2);
+
+      document.getElementById('statMax').textContent =
+        Math.max(...nums).toFixed(2);
+    }
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('errorMsg');
+    el.textContent = '⚠ ' + msg;
+    el.style.display = 'block';
+  }
+</script>
+</body>
+</html>

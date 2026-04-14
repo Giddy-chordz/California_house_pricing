@@ -1,5 +1,5 @@
-Flask
+flask
 pandas
 matplotlib
 seaborn
-statsmodel
+statsmodels
