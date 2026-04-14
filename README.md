@@ -95,8 +95,6 @@ The model was evaluated using standard regression metrics such as:
 * R² Score
 * RMSE
 
-(You can update this section with your actual results)
-
 ---
 
 ## 📁 Project Structure
@@ -171,7 +169,7 @@ http://127.0.0.1:5000/
 
 ## 👤 Author
 
-**Your Name**
+**Gideon Oyegbami**
 
 ---
 
